@@ -1,4 +1,5 @@
 using DesignPatterns;
+using DesignPatterns.Patterns.Singleton;
 
 // ---------------------------------------------------------------------------
 // Registry of pattern demos.
@@ -8,7 +9,7 @@ using DesignPatterns;
 // ---------------------------------------------------------------------------
 var demos = new List<IPatternDemo>
 {
-    // new SingletonDemo(),
+    new SingletonDemo(),
     // new BuilderDemo(),
     // new AbstractFactoryDemo(),
     // new FacadeDemo(),

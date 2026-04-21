@@ -5,6 +5,7 @@ using DesignPatterns.Patterns.AbstractFactory;
 using DesignPatterns.Patterns.Facade;
 using DesignPatterns.Patterns.Strategy;
 using DesignPatterns.Patterns.State;
+using DesignPatterns.Patterns.Mediator;
 
 // ---------------------------------------------------------------------------
 // Registry of pattern demos.
@@ -20,7 +21,7 @@ var demos = new List<IPatternDemo>
     new FacadeDemo(),
     new StrategyDemo(),
     new StateDemo(),
-    // new MediatorDemo(),
+    new MediatorDemo(),
 };
 
 while (true)

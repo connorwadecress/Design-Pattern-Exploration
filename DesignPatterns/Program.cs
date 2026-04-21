@@ -3,6 +3,7 @@ using DesignPatterns.Patterns.Singleton;
 using DesignPatterns.Patterns.Builder;
 using DesignPatterns.Patterns.AbstractFactory;
 using DesignPatterns.Patterns.Facade;
+using DesignPatterns.Patterns.Strategy;
 
 // ---------------------------------------------------------------------------
 // Registry of pattern demos.
@@ -16,7 +17,7 @@ var demos = new List<IPatternDemo>
     new BuilderDemo(),
     new AbstractFactoryDemo(),
     new FacadeDemo(),
-    // new StrategyDemo(),
+    new StrategyDemo(),
     // new StateDemo(),
     // new MediatorDemo(),
 };

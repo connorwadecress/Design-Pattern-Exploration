@@ -6,6 +6,7 @@ using DesignPatterns.Patterns.Facade;
 using DesignPatterns.Patterns.Strategy;
 using DesignPatterns.Patterns.State;
 using DesignPatterns.Patterns.Mediator;
+using DesignPatterns.Reflection;
 
 var demos = new List<IPatternDemo>
 {
@@ -16,6 +17,7 @@ var demos = new List<IPatternDemo>
     new StrategyDemo(),
     new StateDemo(),
     new MediatorDemo(),
+    new ReflectionDemo(),
 };
 
 while (true)

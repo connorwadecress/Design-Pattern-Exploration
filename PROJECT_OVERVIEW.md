@@ -1,6 +1,6 @@
 # v3DesignPatterns — Project Source of Truth
 
-A C# .NET 10 console application that demonstrates seven classic **Gang of Four design patterns** plus a bonus **Reflection** demo. The app runs as an interactive menu: you pick a pattern, its demo prints to the console, and you press a key to go back to the menu.
+A C# .NET 10 console application that demonstrates eleven classic **Gang of Four design patterns** plus a CQRS-over-Mediator variation and a bonus **Reflection** demo. The app runs as an interactive menu: you pick a pattern, its demo prints to the console, and you press a key to go back to the menu.
 
 This document walks through every file, how the files connect, and what each piece of code does — end to end.
 
@@ -46,7 +46,9 @@ v3DesignPatterns/
     │   │   ├── FacadeDemo.cs
     │   │   └── OrderCheckoutFacade.cs # The facade
     │   ├── Mediator/
-    │   │   ├── ChatRoom.cs            # Concrete mediator
+    │   │   ├── ChatRoom.cs            # Concrete mediator (broadcast variant)
+    │   │   ├── Cqrs.cs                # CQRS-flavoured mediator + commands/queries
+    │   │   ├── CqrsDemo.cs
     │   │   ├── MediatorDemo.cs
     │   │   └── Users.cs               # Abstract + concrete colleague
     │   ├── Singleton/
@@ -56,11 +58,24 @@ v3DesignPatterns/
     │   │   ├── Order.cs               # Context
     │   │   ├── OrderStates.cs         # State interface + four states
     │   │   └── StateDemo.cs
-    │   └── Strategy/
-    │       ├── Checkout.cs            # Context
-    │       ├── DiscountStrategies.cs  # Strategy interface + four strategies
-    │       ├── StrategyDemo.cs
-    │       └── StrategyModels.cs      # Cart, Customer, CheckoutResult, LoyaltyTier
+    │   ├── Strategy/
+    │   │   ├── Checkout.cs            # Context
+    │   │   ├── DiscountStrategies.cs  # Strategy interface + four strategies
+    │   │   ├── StrategyDemo.cs
+    │   │   └── StrategyModels.cs      # Cart, Customer, CheckoutResult, LoyaltyTier
+    │   ├── Adapter/
+    │   │   ├── AdapterDemo.cs
+    │   │   └── PaymentAdapter.cs      # IPaymentProcessor + LegacyStripeClient + adapter
+    │   ├── Decorator/
+    │   │   ├── DecoratorDemo.cs
+    │   │   └── Notifiers.cs           # INotifier + base decorator + three concrete decorators
+    │   ├── Proxy/
+    │   │   ├── DocumentService.cs     # IDocumentService + RealDocumentService
+    │   │   ├── Proxies.cs             # Lazy / Protection / Caching proxies
+    │   │   └── ProxyDemo.cs
+    │   └── ChainOfResponsibility/
+    │       ├── Approvers.cs           # Abstract Approver + Manager / Director / CFO
+    │       └── ChainOfResponsibilityDemo.cs
     └── Reflection/
         ├── Calculator.cs              # Plain class (the target)
         ├── ReflectionCalculator.cs    # Inspect-and-invoke wrapper
@@ -378,6 +393,145 @@ Each class:
 - **No user holds a reference to another user.** The only reference any user has is to the mediator. This keeps the graph flat and replaceable.
 - Swap in a `ModeratedChatRoom : IChatRoomMediator` that filters profanity and the user classes don't change.
 
+### 6.8 Mediator (CQRS variant) — `Patterns/Mediator/`
+
+**Problem:** The chat-room mediator broadcasts a string to many recipients. CQRS-flavoured mediators are different: messages are **strongly typed**, each message has **exactly one** handler, and the handler may return a result. This is what libraries like **MediatR** model and what most "send a command, get a result" pipelines look like in production code.
+
+**Files:**
+- [Cqrs.cs](DesignPatterns/Patterns/Mediator/Cqrs.cs) — message marker interfaces, handler interfaces, the `CqrsMediator` itself, a tiny `UserStore`, and one command + two queries with their handlers.
+- [CqrsDemo.cs](DesignPatterns/Patterns/Mediator/CqrsDemo.cs) — registers handlers, sends commands and queries through the mediator.
+
+**Players:**
+
+| Role | Type | Role description |
+|---|---|---|
+| Marker — read | `IQuery<TResult>` | Returns data, doesn't change state. |
+| Marker — write | `ICommand` | Changes state, returns nothing. |
+| Handler interfaces | `IQueryHandler<TQuery, TResult>`, `ICommandHandler<TCommand>` | Exactly one method: `Handle`. |
+| Mediator | `ICqrsMediator` / `CqrsMediator` | Holds a `Dictionary<Type, object>` keyed by message type. `Send` looks up and casts. |
+| Domain | `UserStore` | Trivial in-memory dictionary the handlers share. |
+| Command | `CreateUserCommand` + `CreateUserHandler` | Adds a user, prints the new id. |
+| Queries | `GetUserByIdQuery` + handler, `CountUsersQuery` + handler | Read by id; count all. |
+
+**Flow inside `CqrsDemo.Run()`:**
+1. Build a `UserStore` and a `CqrsMediator`.
+2. Register one handler per message type.
+3. Send two commands (`CreateUser` x2).
+4. Send two queries (`GetUserById(1)` hit, `GetUserById(99)` miss, `CountUsers`).
+5. Print the result the caller saw.
+
+**What's interesting:**
+- **Same pattern, different flavour.** The chat room is a *broadcast* mediator (one sender → many recipients). The CQRS mediator is a *dispatch* mediator (one sender → exactly one handler). Both match GoF's definition because the pattern is "all participants depend on the hub, not on each other".
+- **Caller has zero direct references to handlers.** Add a new query type and one handler, register it, done — no other class changes.
+- **Pipeline behaviours = Chain of Responsibility on top.** Real-world MediatR adds logging/validation/auth as decorators around the dispatch — patterns compose.
+- **Reflection ties in.** A real DI-backed mediator typically uses reflection to discover and register every `IRequestHandler<,>` automatically (see the Reflection demo at the end of the project).
+
+---
+
+## 6b. New Structural & Behavioural Patterns
+
+### 6.9 Adapter — `Patterns/Adapter/`
+
+**Problem:** A third-party library exposes an API in shape *X* but every caller in your codebase already speaks shape *Y* (`IPaymentProcessor`). You can't change the library and you don't want to rewrite every caller.
+
+**Files:**
+- [PaymentAdapter.cs](DesignPatterns/Patterns/Adapter/PaymentAdapter.cs) — `IPaymentProcessor`, the native `ModernPaymentProcessor`, the third-party-shaped `LegacyStripeClient`, and the `LegacyStripeAdapter`.
+- [AdapterDemo.cs](DesignPatterns/Patterns/Adapter/AdapterDemo.cs).
+
+**Players:**
+
+| Role | Type | Notes |
+|---|---|---|
+| Target (what callers use) | `IPaymentProcessor` | `Charge(string customerEmail, decimal amount) → bool` |
+| Native impl | `ModernPaymentProcessor` | Implements the target directly. |
+| Adaptee (third-party) | `LegacyStripeClient` | `ExecutePayment(int cents, string currency, string reference) → string` |
+| Adapter | `LegacyStripeAdapter` | Implements `IPaymentProcessor`, holds a `LegacyStripeClient`, translates `Charge` → `ExecutePayment`. |
+
+**Flow inside `AdapterDemo.Run()`:**
+- Calls `Charge(...)` on the native processor — prints `[Modern] charged ...`.
+- Calls `Charge(...)` on the adapter — internally calls `LegacyStripeClient.ExecutePayment(...)` (dollars → cents, "USD", reference) — prints `[Legacy] executed ...`.
+- Same caller code; the adapter hides the API mismatch.
+
+**What's interesting:**
+- The adapter's *only* job is translation. No business logic, no orchestration.
+- Contrast with **Facade**: a Facade composes a *cluster* of subsystems into one simple call (`OrderCheckoutFacade`). An Adapter translates *one* mismatched API into the shape your code expects. Both wrap, but for different reasons.
+
+### 6.10 Decorator — `Patterns/Decorator/`
+
+**Problem:** You want to add behaviour (logging, retry, timestamping) to a service without modifying its class. Each piece of behaviour should be optional and stackable.
+
+**Files:**
+- [Notifiers.cs](DesignPatterns/Patterns/Decorator/Notifiers.cs) — `INotifier`, the real `EmailNotifier`, the abstract `NotifierDecorator`, and three concrete decorators.
+- [DecoratorDemo.cs](DesignPatterns/Patterns/Decorator/DecoratorDemo.cs).
+
+**Players:**
+
+| Role | Type |
+|---|---|
+| Component | `INotifier` |
+| Concrete component | `EmailNotifier` |
+| Base decorator | `NotifierDecorator` (abstract — holds `Inner`, default-forwards `Send`) |
+| Concrete decorators | `TimestampDecorator`, `LoggingDecorator`, `RetryDecorator` |
+
+**Flow inside `DecoratorDemo.Run()`:**
+1. Plain `EmailNotifier.Send("hello")`.
+2. `new TimestampDecorator(new EmailNotifier()).Send("hello")` — prefixes a `[HH:mm:ss]` stamp.
+3. Stacked: `Logging(Retry(Timestamp(Email)))` — outer-to-inner. Logging prints before/after, Retry runs the inner Send `attempts` times, each retry stamps a fresh timestamp before Email prints.
+
+**What's interesting:**
+- **Decorators stack** because every decorator implements the same `INotifier` interface as the thing it wraps.
+- **Open/Closed payoff** — `EmailNotifier` is closed for modification, but adding `EncryptionDecorator` requires zero changes to it.
+- Contrast with **Proxy**: a Proxy controls *whether/when* the inner call runs (auth, lazy load). A Decorator *always* calls the inner and adds something around it. Both share the wrapped interface, the difference is intent.
+
+### 6.11 Proxy — `Patterns/Proxy/`
+
+**Problem:** You want a stand-in for an expensive or sensitive object. The stand-in shares the real object's interface so clients can't tell them apart, but it controls access — lazy creation, authorisation, caching, remote dispatch, etc.
+
+**Files:**
+- [DocumentService.cs](DesignPatterns/Patterns/Proxy/DocumentService.cs) — `IDocumentService`, the real `RealDocumentService`.
+- [Proxies.cs](DesignPatterns/Patterns/Proxy/Proxies.cs) — three flavours of proxy.
+- [ProxyDemo.cs](DesignPatterns/Patterns/Proxy/ProxyDemo.cs).
+
+**Players:**
+
+| Proxy | Flavour | Behaviour |
+|---|---|---|
+| `LazyDocumentProxy` | Virtual | Real subject is `null` until first call; `??=` constructs on demand. |
+| `ProtectionDocumentProxy` | Protection | Throws `UnauthorizedAccessException` if a non-admin requests a `classified-*` document; otherwise delegates. |
+| `CachingDocumentProxy` | Caching | Stores results in a `Dictionary<string,string>`; returns cached value on repeat reads of the same id. |
+
+**Flow inside `ProxyDemo.Run()`:**
+1. Virtual proxy is constructed (no real subject yet); first `GetDocument` triggers `[Real] constructed`.
+2. Protection proxy allows `alice` (admin) to read `classified-x`, blocks `bob` (caught and printed).
+3. Caching proxy: first call is `MISS` and reaches `RealDocumentService`; second call for the same id is a `HIT` and never delegates.
+
+**What's interesting:**
+- Same `IDocumentService` everywhere — the client cannot distinguish a real subject from a proxy.
+- All three flavours can be **stacked** (cache(protection(real))) because they share the interface, identical to Decorator's stacking trick.
+- **Proxy vs Decorator** is the most asked-about distinction. Memorise: "Proxy controls access, Decorator adds behaviour. Proxy may skip the inner call; Decorator always runs it."
+
+### 6.12 Chain of Responsibility — `Patterns/ChainOfResponsibility/`
+
+**Problem:** You have a request that *one* of several handlers might process, and you don't want the caller to know which. Each handler decides: handle it, or pass to the next.
+
+**Files:**
+- [Approvers.cs](DesignPatterns/Patterns/ChainOfResponsibility/Approvers.cs) — `ExpenseRequest` record, abstract `Approver` (holds `_next`), `ManagerApprover` ($1k limit), `DirectorApprover` ($10k limit), `CfoApprover` ($100k limit).
+- [ChainOfResponsibilityDemo.cs](DesignPatterns/Patterns/ChainOfResponsibility/ChainOfResponsibilityDemo.cs).
+
+**Flow inside `ChainOfResponsibilityDemo.Run()`:**
+1. Build the chain — `manager.SetNext(director).SetNext(cfo)` (returns the new tail so calls chain fluently).
+2. Submit four `ExpenseRequest`s through `manager.Handle(...)`:
+   - $250 → Manager approves.
+   - $5,000 → Manager escalates → Director approves.
+   - $75,000 → Manager → Director → CFO approves.
+   - $250,000 → all escalate → end of chain → `[REJECTED]`.
+
+**What's interesting:**
+- **No handler knows about any other handler's rules** — only its own limit and a `_next` pointer.
+- The chain itself is the abstraction; you add a new approval tier (`VPApprover`) by inserting a node between Director and CFO. No existing handler changes.
+- **CoR vs State:** State *replaces itself* (`Pending → Paid`) when an action happens. CoR *forwards through* without anyone replacing anyone — the chain is fixed for the lifetime of the request. The underlying mechanism (a polymorphic next-thing pointer) is similar; the semantics are not.
+- **Where you've already seen this:** ASP.NET Core middleware (`app.Use(...)`) is CoR — each middleware decides whether to call `next()` or short-circuit. The MediatR pipeline-behaviours model is CoR layered over the CQRS Mediator.
+
 ---
 
 ## 7. The Bonus — Reflection Demo
@@ -418,14 +572,19 @@ The call graph from top to bottom:
 ```
 Program.cs
   └─ holds a List<IPatternDemo>
-       ├─ SingletonDemo       → AppLogger / AppLoggerThreadSafe / AppLoggerLazy
-       ├─ BuilderDemo         → EmailBuilder → EmailMessage  ;  EmailDirector(IEmailBuilder)
-       ├─ AbstractFactoryDemo → LoginScreen(IUiFactory) → IButton / ITextBox
-       ├─ FacadeDemo          → OrderCheckoutFacade → 4 subsystem services
-       ├─ StrategyDemo        → Checkout(IDiscountStrategy) → Cart / Customer
-       ├─ StateDemo           → Order → IOrderState (four concrete states)
-       ├─ MediatorDemo        → ChatRoom(IChatRoomMediator) ← StandardUser(User)
-       └─ ReflectionDemo      → ReflectionCalculator → Calculator  (via Reflection)
+       ├─ SingletonDemo                → AppLogger / AppLoggerThreadSafe / AppLoggerLazy
+       ├─ BuilderDemo                  → EmailBuilder → EmailMessage  ;  EmailDirector(IEmailBuilder)
+       ├─ AbstractFactoryDemo          → LoginScreen(IUiFactory) → IButton / ITextBox
+       ├─ FacadeDemo                   → OrderCheckoutFacade → 4 subsystem services
+       ├─ StrategyDemo                 → Checkout(IDiscountStrategy) → Cart / Customer
+       ├─ StateDemo                    → Order → IOrderState (four concrete states)
+       ├─ MediatorDemo                 → ChatRoom(IChatRoomMediator) ← StandardUser(User)
+       ├─ CqrsDemo                     → CqrsMediator(ICqrsMediator) → ICommandHandler / IQueryHandler<,>
+       ├─ AdapterDemo                  → IPaymentProcessor ← LegacyStripeAdapter → LegacyStripeClient
+       ├─ DecoratorDemo                → INotifier stack: Logging(Retry(Timestamp(Email)))
+       ├─ ProxyDemo                    → IDocumentService — lazy / protection / caching variants
+       ├─ ChainOfResponsibilityDemo    → Approver chain: Manager → Director → CFO
+       └─ ReflectionDemo               → ReflectionCalculator → Calculator  (via Reflection)
 ```
 
 ### Cross-file contracts to remember
@@ -440,6 +599,12 @@ Program.cs
 | `IDiscountStrategy` | `NoDiscountStrategy`, `PercentageDiscountStrategy`, `BulkDiscountStrategy`, `LoyaltyDiscountStrategy` | `Checkout` |
 | `IOrderState` | `PendingPaymentState`, `PaidState`, `ShippedState`, `DeliveredState` | `Order` |
 | `IChatRoomMediator` | `ChatRoom` | `User` (abstract) |
+| `ICqrsMediator` | `CqrsMediator` | `CqrsDemo` (caller); handlers register against it |
+| `ICommandHandler<T>` / `IQueryHandler<T,R>` | `CreateUserHandler`, `GetUserByIdHandler`, `CountUsersHandler` | `CqrsMediator` (resolves by type) |
+| `IPaymentProcessor` | `ModernPaymentProcessor`, `LegacyStripeAdapter` | `AdapterDemo` (any caller) |
+| `INotifier` | `EmailNotifier` + decorator chain (`TimestampDecorator`, `LoggingDecorator`, `RetryDecorator`) | `DecoratorDemo` (any caller) |
+| `IDocumentService` | `RealDocumentService`, `LazyDocumentProxy`, `ProtectionDocumentProxy`, `CachingDocumentProxy` | `ProxyDemo` (any caller) |
+| `Approver` (abstract) | `ManagerApprover`, `DirectorApprover`, `CfoApprover` | `ChainOfResponsibilityDemo` |
 
 Every pattern boils down to the same sentence: **depend on the interface, inject the concrete thing, and the calling code doesn't change when the concrete thing does.** The patterns differ in *what* is being varied — a family of products, a construction recipe, an algorithm, a lifecycle stage, a routing hub — but the mechanism is the same.
 

@@ -6,6 +6,10 @@ using DesignPatterns.Patterns.Facade;
 using DesignPatterns.Patterns.Strategy;
 using DesignPatterns.Patterns.State;
 using DesignPatterns.Patterns.Mediator;
+using DesignPatterns.Patterns.Adapter;
+using DesignPatterns.Patterns.Decorator;
+using DesignPatterns.Patterns.Proxy;
+using DesignPatterns.Patterns.ChainOfResponsibility;
 using DesignPatterns.Reflection;
 
 var demos = new List<IPatternDemo>
@@ -17,6 +21,11 @@ var demos = new List<IPatternDemo>
     new StrategyDemo(),
     new StateDemo(),
     new MediatorDemo(),
+    new CqrsDemo(),
+    new AdapterDemo(),
+    new DecoratorDemo(),
+    new ProxyDemo(),
+    new ChainOfResponsibilityDemo(),
     new ReflectionDemo(),
 };
 

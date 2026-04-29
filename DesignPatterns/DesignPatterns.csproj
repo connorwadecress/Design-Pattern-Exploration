@@ -15,6 +15,10 @@
     <Folder Include="Patterns\Facade\" />
     <Folder Include="Patterns\State\" />
     <Folder Include="Patterns\Singleton\" />
+    <Folder Include="Patterns\Adapter\" />
+    <Folder Include="Patterns\Decorator\" />
+    <Folder Include="Patterns\Proxy\" />
+    <Folder Include="Patterns\ChainOfResponsibility\" />
   </ItemGroup>
 
 </Project>

@@ -1,12 +1,11 @@
 namespace DesignPatterns.Patterns.Facade;
 
-// Simple data types used by the checkout.
 internal record Customer(string Name, string Email);
 internal record Item(string Sku, decimal Price);
 internal record OrderResult(bool Succeeded, string? TrackingNumber, string? FailureReason);
 
 // The four subsystem services the facade orchestrates.
-// Each is tiny - the point of the pattern is that coordinating them is what's painful,
+// Each is tiny - coordinating them is what's painful,
 // not any one service on its own.
 
 internal interface IInventoryService

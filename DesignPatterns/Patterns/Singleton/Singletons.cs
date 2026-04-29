@@ -1,12 +1,10 @@
 namespace DesignPatterns.Patterns.Singleton;
 
-// Three flavours of Singleton, same job, progressively better.
-// Each uses an InstanceId so you can prove they're the same object across calls.
 
 // V1 - naive. Not thread-safe: two threads could both pass the null check.
 internal class AppLogger
 {
-    private static AppLogger? _instance;
+    private static AppLogger? _instance; // acts as constructor -> actually calls private constructor to create the instance
 
     public Guid InstanceId { get; } = Guid.NewGuid();
 
@@ -23,7 +21,7 @@ internal class AppLogger
     }
 
     public void Log(string message)
-        => Console.WriteLine($"  [{InstanceId.ToString()[..8]}] {message}");
+        => Console.WriteLine($"  [{InstanceId.ToString()[..8]}] {message}");  
 }
 
 // V2 - thread-safe with double-checked locking.
@@ -58,7 +56,7 @@ internal class AppLoggerThreadSafe
         => Console.WriteLine($"  [{InstanceId.ToString()[..8]}] {message}");
 }
 
-// V3 - Lazy<T>. Idiomatic modern C#. Default thread-safety mode guarantees
+// V3 - Lazy<T> - handles thread safety for you. 
 // the factory runs at most once across all threads.
 internal class AppLoggerLazy
 {

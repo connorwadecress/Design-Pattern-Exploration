@@ -1,10 +1,11 @@
 namespace DesignPatterns.Patterns.Builder;
 
-// The PRODUCT. Immutable - all properties are get-only, constructor is internal
-// so only the builder (in this assembly) can create one.
+// The PRODUCT. Immutable - all properties are get-only
+//internal so that construction happens through the builder
+//cant bypass the builder
 internal class EmailMessage
 {
-    public string To { get; }
+    public string To { get; } //get only so its immutable
     public string Subject { get; }
     public string Body { get; }
     public IReadOnlyList<string> Cc { get; }

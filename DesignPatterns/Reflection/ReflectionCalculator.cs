@@ -2,10 +2,10 @@ using System.Reflection;
 
 namespace DesignPatterns.Reflection;
 
-// Uses reflection to inspect a Calculator and invoke its methods by NAME.
-// Nothing in this class hardcodes which operations exist - everything is
-// discovered at runtime from the Calculator type itself.
-//
+// Uses reflection to inspect a Calculator and invoke its methods by NAME
+// no hardcodes in this class
+// everything is discovered at runtime from the Calculator type itself
+
 // This is the same pattern a DI container uses, just with CONSTRUCTORS
 // instead of METHODS: inspect the type, then invoke.
 internal class ReflectionCalculator

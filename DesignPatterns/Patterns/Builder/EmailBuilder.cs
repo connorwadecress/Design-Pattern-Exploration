@@ -16,7 +16,7 @@ internal class EmailBuilder : IEmailBuilder
     private string? _to;
     private string? _subject;
     private string? _body;
-    private readonly List<string> _cc = new();
+    private readonly List<string> _cc = new();  //copy list in Build() so that already built product can never be mutated by future changes
 
     public IEmailBuilder To(string address) { _to = address; return this; }
     public IEmailBuilder Subject(string subject) { _subject = subject; return this; }

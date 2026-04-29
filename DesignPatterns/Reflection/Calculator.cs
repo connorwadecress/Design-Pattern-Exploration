@@ -1,7 +1,7 @@
 namespace DesignPatterns.Reflection;
 
-// An ordinary class with normal methods. No dispatcher logic, no switch statements,
-// no registry of operations. Reflection will discover and invoke these at runtime.
+// An ordinary class with normal methods no switch statements
+// Reflection will discover and invoke these at runtime
 internal class Calculator
 {
     public double Add(double a, double b) => a + b;

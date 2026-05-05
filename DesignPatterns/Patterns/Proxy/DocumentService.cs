@@ -6,8 +6,9 @@ internal interface IDocumentService
     string GetDocument(string id, string user);
 }
 
-// The "real" expensive subject. In real life this would hit a database
-// or pull a file off disk. We just print and return a fake body.
+// The "real" expensive subject - real implementation would hit a database
+// or pull a file off disk
+// this will just return fake body
 internal class RealDocumentService : IDocumentService
 {
     public RealDocumentService()

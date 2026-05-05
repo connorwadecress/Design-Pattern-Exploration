@@ -1,7 +1,7 @@
 namespace DesignPatterns.Patterns.Proxy;
 
 // VIRTUAL PROXY - delays creation of the real service until first call.
-// Useful when the real subject is expensive and may never be needed.
+// saves resources for when subject is expensive
 internal class LazyDocumentProxy : IDocumentService
 {
     private RealDocumentService? _real;
@@ -39,7 +39,7 @@ internal class ProtectionDocumentProxy : IDocumentService
     }
 }
 
-// CACHING PROXY - returns a stored result on a hit, only delegates on a miss.
+// CACHING PROXY - returns a Cached result on a hit, only delegates on a miss.
 // Real subject's GetDocument runs at most once per document id.
 internal class CachingDocumentProxy : IDocumentService
 {

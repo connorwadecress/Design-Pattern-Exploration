@@ -19,7 +19,7 @@ internal class ModernPaymentProcessor : IPaymentProcessor
 
 // The third-party library we can't change. Different method name,
 // different argument shape (cents instead of dollars), different return type.
-// Pretend this lives in a NuGet package.
+// example would be in a nuget package
 internal class LegacyStripeClient
 {
     public string ExecutePayment(int amountInCents, string currencyCode, string reference)
